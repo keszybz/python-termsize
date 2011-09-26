@@ -10,7 +10,15 @@ static PyObject* _termsize(PyObject *self, PyObject *args)
 		return NULL;
 	
 	struct winsize w;
-	ioctl(fd, TIOCGWINSZ, &w);
+	if(ioctl(fd, TIOCGWINSZ, &w)) {
+		switch(errno){
+		case EBADF:
+			return PyErr_Format(PyExc_ValueError,
+					    "bad file descriptor");
+		default:
+			return PyErr_SetFromErrno(PyExc_IOError);
+		}
+	}
 
 	return Py_BuildValue("(ii)", w.ws_col, w.ws_row);
 }
