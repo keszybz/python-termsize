@@ -1,6 +1,11 @@
 #include <Python.h>
 
+#ifndef WIN32
 #include <sys/ioctl.h>
+#else
+#include <windows.h>
+#include <conio.h>
+#endif
 
 static PyObject* _termsize(PyObject *self, PyObject *args)
 {
@@ -8,7 +13,9 @@ static PyObject* _termsize(PyObject *self, PyObject *args)
 
 	if(!PyArg_ParseTuple(args, "|i", &fd))
 		return NULL;
-	
+
+	int columns, rows;
+#ifndef WIN32
 	struct winsize w;
 	if(ioctl(fd, TIOCGWINSZ, &w)) {
 		switch(errno){
@@ -19,8 +26,32 @@ static PyObject* _termsize(PyObject *self, PyObject *args)
 			return PyErr_SetFromErrno(PyExc_IOError);
 		}
 	}
+	columns = w.ws_col;
+	rows = w.ws_row;
+#else
+	int nhandle;
+	switch(fd){
+	case 0: nhandle = STD_INPUT_HANDLE;
+		break;
+	case 1: nhandle = STD_OUTPUT_HANDLE;
+		break;
+	case 2: nhandle = STD_ERROR_HANDLE;
+		break;
+	default:
+		return PyErr_Format(PyExc_ValueError, "bad file descriptor");
+	}
 
-	return Py_BuildValue("(ii)", w.ws_col, w.ws_row);
+	HANDLE handle = GetStdHandle(fd);
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	if(GetConsoleScreenBufferInfo(handle, &csbi))
+		return PyErr_Format(PyExc_IOError, "error %i",
+				    (int) GetLastError());
+
+	columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+	rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+#endif
+
+	return Py_BuildValue("(ii)", columns, rows);
 }
 
 static PyMethodDef methods[] = {
