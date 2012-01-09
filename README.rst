@@ -37,7 +37,7 @@ is thrown.
 `get_terminal_size`_ is the high-level function which should normally
 be used, ``get_terminal_size_raw`` is the low-level implementation.
 
-.. _terminal size:
+.. _terminal_size:
 
 named tuple terminal_size(tuple)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
